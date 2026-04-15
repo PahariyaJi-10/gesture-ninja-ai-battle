@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import random
 import math
+import os
 
 # ---------------- HAND TRACKING ----------------
 mp_hands = mp.solutions.hands
@@ -11,9 +12,19 @@ mp_draw = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
 
 # ---------------- LOAD IMAGES ----------------
-apple = cv2.imread("assets/apple.png", cv2.IMREAD_UNCHANGED)
-bomb = cv2.imread("assets/bomb.png", cv2.IMREAD_UNCHANGED)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+apple_path = os.path.join(BASE_DIR, "assets", "apple.png")
+bomb_path = os.path.join(BASE_DIR, "assets", "bomb.png")
+
+apple = cv2.imread(apple_path, cv2.IMREAD_UNCHANGED)
+bomb = cv2.imread(bomb_path, cv2.IMREAD_UNCHANGED)
+
+if apple is None or bomb is None:
+    print("❌ ERROR: Images not found!")
+    exit()
+
+# Resize
 apple = cv2.resize(apple, (80, 80))
 bomb = cv2.resize(bomb, (80, 80))
 
@@ -24,7 +35,7 @@ game_over = False
 fruits = []
 explosions = []
 
-# ---------------- DRAW IMAGE FUNCTION ----------------
+# ---------------- DRAW IMAGE (FIXED) ----------------
 def draw_image(frame, img, x, y):
     h, w = img.shape[:2]
     x1 = int(x - w / 2)
@@ -33,14 +44,22 @@ def draw_image(frame, img, x, y):
     if x1 < 0 or y1 < 0 or x1 + w > frame.shape[1] or y1 + h > frame.shape[0]:
         return
 
-    roi = frame[y1:y1 + h, x1:x1 + w]
+    # ✅ If image is empty (your case)
+    if img.sum() == 0:
+        cv2.circle(frame, (int(x), int(y)), 30, (0, 165, 255), -1)
+        return
 
+    roi = frame[y1:y1+h, x1:x1+w]
+
+    # ✅ If PNG has alpha
     if img.shape[2] == 4:
         alpha = img[:, :, 3] / 255.0
         for c in range(3):
             roi[:, :, c] = (1 - alpha) * roi[:, :, c] + alpha * img[:, :, c]
     else:
         roi[:] = img
+print("Apple sum:", apple.sum())
+print("Bomb sum:", bomb.sum())
 
 # ---------------- MAIN LOOP ----------------
 while True:
@@ -73,7 +92,7 @@ while True:
     speed = math.hypot(x - prev_x, y - prev_y)
 
     # -------- SPAWN --------
-    if random.randint(1, 20) == 1:
+    if not game_over and random.randint(1, 15) == 1:
         fruits.append({
             "x": random.randint(50, w - 50),
             "y": h + 50,
@@ -97,7 +116,7 @@ while True:
         # COLLISION
         dist = math.hypot(fruit["x"] - x, fruit["y"] - y)
 
-        if dist < 40 and speed > 20:
+        if not game_over and dist < 40 and speed > 20:
             if fruit["type"] == "apple":
                 score += 1
             else:
@@ -109,7 +128,7 @@ while True:
                 })
             fruits.remove(fruit)
 
-        # REMOVE OUTSIDE
+        # REMOVE IF OUT
         if fruit["y"] > h:
             fruits.remove(fruit)
 
