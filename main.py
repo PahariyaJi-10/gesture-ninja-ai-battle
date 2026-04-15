@@ -4,6 +4,9 @@ import random
 import math
 import os
 
+# ---------------- TIMER ----------------
+start_time = cv2.getTickCount()
+
 # ---------------- HAND TRACKING ----------------
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(max_num_hands=1)
@@ -35,7 +38,7 @@ game_over = False
 fruits = []
 explosions = []
 
-# ---------------- DRAW IMAGE (FIXED) ----------------
+# ---------------- DRAW IMAGE ----------------
 def draw_image(frame, img, x, y):
     h, w = img.shape[:2]
     x1 = int(x - w / 2)
@@ -44,20 +47,15 @@ def draw_image(frame, img, x, y):
     if x1 < 0 or y1 < 0 or x1 + w > frame.shape[1] or y1 + h > frame.shape[0]:
         return
 
-    # ✅ If image is empty (your case)
-    if img.sum() == 0:
-        cv2.circle(frame, (int(x), int(y)), 30, (0, 165, 255), -1)
-        return
-
     roi = frame[y1:y1+h, x1:x1+w]
 
-    # ✅ If PNG has alpha
     if img.shape[2] == 4:
         alpha = img[:, :, 3] / 255.0
         for c in range(3):
             roi[:, :, c] = (1 - alpha) * roi[:, :, c] + alpha * img[:, :, c]
     else:
-        roi[:] = img
+        roi[:] = img[:, :, :3]
+
 print("Apple sum:", apple.sum())
 print("Bomb sum:", bomb.sum())
 
@@ -92,7 +90,7 @@ while True:
     speed = math.hypot(x - prev_x, y - prev_y)
 
     # -------- SPAWN --------
-    if not game_over and random.randint(1,5) == 1:
+    if not game_over and random.randint(1, 5) == 1:
         fruits.append({
             "x": random.randint(50, w - 50),
             "y": h - 50,
@@ -116,7 +114,9 @@ while True:
         # COLLISION
         dist = math.hypot(fruit["x"] - x, fruit["y"] - y)
 
-        if not game_over and dist < 40 and speed > 20:
+        elapsed = (cv2.getTickCount() - start_time) / cv2.getTickFrequency()
+
+        if elapsed > 2 and not game_over and dist < 50 and speed > 40:
             if fruit["type"] == "apple":
                 score += 1
             else:
@@ -132,7 +132,7 @@ while True:
         if fruit["y"] > h:
             fruits.remove(fruit)
 
-    # -------- EXPLOSION EFFECT --------
+    # -------- EXPLOSIONS --------
     for exp in explosions[:]:
         cv2.circle(frame, (int(exp["x"]), int(exp["y"])),
                    int(exp["radius"]), (0, 0, 255), 3)
@@ -154,6 +154,7 @@ while True:
 
     cv2.imshow("Gesture Fruit Ninja", frame)
 
+    # ✅ FIXED BREAK (inside loop)
     if cv2.waitKey(1) & 0xFF == 27:
         break
 
