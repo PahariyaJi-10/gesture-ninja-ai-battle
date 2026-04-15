@@ -42,7 +42,7 @@ def draw_image(frame, img, x, y):
             roi[:, :, c] = (1 - alpha) * roi[:, :, c] + alpha * img[:, :, c]
     else:
         roi[:] = img
-
+explosions = []
 # ---------------- MAIN LOOP ----------------
 while True:
     success, frame = cap.read()
@@ -90,7 +90,12 @@ while True:
         fruit["x"] += fruit["vx"]
         fruit["y"] += fruit["vy"]
         fruit["vy"] += 0.5  # gravity
+    for exp in explosions[:]:
+     cv2.circle(frame, (int(exp["x"]), int(exp["y"])), int(exp["radius"]), (0, 0, 255), 3)
+    exp["radius"] += 10
 
+    if exp["radius"] > 100:
+        explosions.remove(exp)
         # DRAW
         if fruit["type"] == "apple":
             draw_image(frame, apple, fruit["x"], fruit["y"])
@@ -105,6 +110,7 @@ while True:
                 score += 1
             else:
                 game_over = True
+                explosions.append({"x": fruit["x"], "y": fruit["y"], "radius": 10})
             fruits.remove(fruit)
 
         # REMOVE IF OUT
@@ -116,6 +122,7 @@ while True:
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     if game_over:
+        frame[:] = (0, 0, 100)  # red tint
         cv2.putText(frame, "GAME OVER", (w//2 - 150, h//2),
                     cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
 
