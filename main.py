@@ -3,7 +3,7 @@ import mediapipe as mp
 import random
 import math
 import os
-import winsound   # ✅ SIMPLE SOUND
+import winsound
 
 # ---------------- HAND TRACKING ----------------
 mp_hands = mp.solutions.hands
@@ -28,6 +28,7 @@ bomb = cv2.resize(bomb, (80, 80))
 # ---------------- GAME VARIABLES ----------------
 prev_x, prev_y = 0, 0
 score = 0
+lives = 3   # ❤️ NEW
 game_over = False
 game_started = False
 
@@ -67,7 +68,7 @@ while True:
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb)
 
-    x, y = -100, -100  # default (no hand)
+    x, y = -100, -100
 
     # -------- HAND DETECTION --------
     if results.multi_hand_landmarks:
@@ -122,9 +123,8 @@ while True:
 
                 if fruit["type"] == "apple":
                     score += 1
-                    winsound.Beep(800, 100)   # 🍎 slice sound
+                    winsound.Beep(800, 100)
 
-                    # SLICE EFFECT
                     slices.append({
                         "particles": [
                             {
@@ -137,14 +137,17 @@ while True:
                     })
 
                 else:
-                    game_over = True
-                    winsound.Beep(300, 300)   # 💣 bomb sound
+                    lives -= 1   # ❤️ LIFE LOST
+                    winsound.Beep(300, 200)
 
                     explosions.append({
                         "x": fruit["x"],
                         "y": fruit["y"],
                         "radius": 10
                     })
+
+                    if lives <= 0:
+                        game_over = True
 
                 fruits.remove(fruit)
 
@@ -178,6 +181,10 @@ while True:
     cv2.putText(frame, f"Score: {score}", (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
+    # ❤️ SHOW LIVES
+    cv2.putText(frame, f"Lives: {lives}", (10, 80),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
     if game_over:
         frame[:] = (0, 0, 100)
         cv2.putText(frame, "GAME OVER", (w//2 - 150, h//2),
@@ -195,6 +202,7 @@ while True:
         game_started = True
         game_over = False
         score = 0
+        lives = 3   # ❤️ RESET
         fruits.clear()
         explosions.clear()
         slices.clear()
@@ -203,6 +211,7 @@ while True:
     if key == ord('r') and game_over:
         game_over = False
         score = 0
+        lives = 3   # ❤️ RESET
         fruits.clear()
         explosions.clear()
         slices.clear()
