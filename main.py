@@ -137,33 +137,34 @@ while True:
                 fruits.remove(fruit)
                 continue
 
-            # remove if out
+            # REMOVE if out
             if fruit["y"] > h:
                 fruits.remove(fruit)
 
-        # -------- SMART AI --------
+        # -------- MEDIUM AI --------
         if len(fruits) > 0:
+
             target = min(fruits, key=lambda f: math.hypot(f["x"] - ai_x, f["y"] - ai_y))
 
-            ai_speed = 0.18   # 🔥 increase for harder AI
+            ai_speed = 0.12   # 🔥 medium difficulty
 
             ai_x += (target["x"] - ai_x) * ai_speed
             ai_y += (target["y"] - ai_y) * ai_speed
 
             ai_dist = math.hypot(target["x"] - ai_x, target["y"] - ai_y)
 
-            # AI reaction + randomness
-            if ai_dist < 40 and random.random() > 0.2:
+            # Medium accuracy + delay
+            if ai_dist < 45 and random.random() > 0.3:
 
-                if target["type"] == "apple":
-                    ai_score += 1
-                else:
-                    # AI sometimes makes mistake
-                    if random.random() < 0.3:
-                        pass  # ignore bomb mostly
+                if random.randint(1, 3) == 1:  # delay
 
-                if target in fruits:
-                    fruits.remove(target)
+                    if target["type"] == "apple":
+                        ai_score += 1
+
+                    # AI sometimes misses bomb (good balance)
+
+                    if target in fruits:
+                        fruits.remove(target)
 
     # -------- DRAW AI --------
     cv2.circle(frame, (int(ai_x), int(ai_y)), 12, (255, 0, 0), -1)
@@ -180,23 +181,28 @@ while True:
     cv2.putText(frame, f"Lives: {lives}", (10, 120),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-    # -------- GAME OVER SCREEN --------
+    # -------- GAME OVER --------
     if game_over:
         frame[:] = (0, 0, 100)
 
-        result = "YOU WIN!" if score > ai_score else "AI WINS!"
+        if score > ai_score:
+            result = "YOU WIN!"
+        elif score < ai_score:
+            result = "AI WINS!"
+        else:
+            result = "DRAW!"
 
-        cv2.putText(frame, result, (w//2 - 150, h//2),
+        cv2.putText(frame, result, (w//2 - 200, h//2 - 50),
                     cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 4)
 
-        cv2.putText(frame, f"You: {score}", (w//2 - 120, h//2 + 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"You: {score}", (w//2 - 150, h//2 + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
 
-        cv2.putText(frame, f"AI: {ai_score}", (w//2 - 120, h//2 + 130),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        cv2.putText(frame, f"AI: {ai_score}", (w//2 - 150, h//2 + 80),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 0, 0), 3)
 
-        cv2.putText(frame, "Press R to Restart", (w//2 - 200, h//2 + 200),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, "Press R to Restart", (w//2 - 220, h//2 + 140),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (200, 200, 200), 2)
 
     prev_x, prev_y = x, y
 
