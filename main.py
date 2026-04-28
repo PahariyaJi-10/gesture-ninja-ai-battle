@@ -28,6 +28,7 @@ bomb = cv2.resize(bomb, (80, 80))
 # ---------------- GAME VARIABLES ----------------
 prev_x, prev_y = 0, 0
 score = 0
+ai_score = 0   # 🤖 AI score
 lives = 3
 game_over = False
 game_started = False
@@ -36,10 +37,8 @@ fruits = []
 explosions = []
 slices = []
 
-# 🔥 COMBO VARIABLES
-combo = 0
-last_slice_time = 0
-combo_reset_time = 1.0   # seconds
+# 🤖 AI POSITION
+ai_x, ai_y = 300, 300
 
 start_time = cv2.getTickCount()
 
@@ -120,95 +119,57 @@ while True:
             else:
                 draw_image(frame, bomb, fruit["x"], fruit["y"])
 
+            # -------- PLAYER COLLISION --------
             dist = math.hypot(fruit["x"] - x, fruit["y"] - y)
 
             if x != -100 and elapsed > 2 and dist < 50 and speed > 40:
 
-                current_time = elapsed
-
-                # 🔥 COMBO LOGIC
-                if current_time - last_slice_time < combo_reset_time:
-                    combo += 1
-                else:
-                    combo = 1
-
-                last_slice_time = current_time
-
                 if fruit["type"] == "apple":
-                    score += combo   # combo multiplier
-                    winsound.Beep(800 + combo*100, 80)
-
-                    slices.append({
-                        "particles": [
-                            {
-                                "x": fruit["x"],
-                                "y": fruit["y"],
-                                "vx": random.uniform(-5, 5),
-                                "vy": random.uniform(-5, 5)
-                            } for _ in range(10)
-                        ]
-                    })
-
+                    score += 1
+                    winsound.Beep(800, 100)
                 else:
                     lives -= 1
-                    combo = 0  # reset combo on bomb
                     winsound.Beep(300, 200)
-
-                    explosions.append({
-                        "x": fruit["x"],
-                        "y": fruit["y"],
-                        "radius": 10
-                    })
-
                     if lives <= 0:
                         game_over = True
 
                 fruits.remove(fruit)
+                continue
 
-            if fruit["y"] > h:
+            # -------- AI LOGIC --------
+            # AI moves towards fruit
+            ai_x += (fruit["x"] - ai_x) * 0.08
+            ai_y += (fruit["y"] - ai_y) * 0.08
+
+            ai_dist = math.hypot(fruit["x"] - ai_x, fruit["y"] - ai_y)
+
+            if ai_dist < 40:
+                if fruit["type"] == "apple":
+                    ai_score += 1
                 fruits.remove(fruit)
 
-    # -------- SLICE EFFECT --------
-    for s in slices[:]:
-        for p in s["particles"]:
-            p["x"] += p["vx"]
-            p["y"] += p["vy"]
-            p["vy"] += 0.3
-            cv2.circle(frame, (int(p["x"]), int(p["y"])), 3, (0, 255, 255), -1)
-
-        if len(s["particles"]) > 0:
-            s["particles"].pop()
-
-        if len(s["particles"]) == 0:
-            slices.remove(s)
-
-    # -------- EXPLOSIONS --------
-    for exp in explosions[:]:
-        cv2.circle(frame, (int(exp["x"]), int(exp["y"])),
-                   int(exp["radius"]), (0, 0, 255), 3)
-        exp["radius"] += 10
-
-        if exp["radius"] > 100:
-            explosions.remove(exp)
+    # -------- DRAW AI --------
+    cv2.circle(frame, (int(ai_x), int(ai_y)), 12, (255, 0, 0), -1)
+    cv2.putText(frame, "AI", (int(ai_x)-10, int(ai_y)-20),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
 
     # -------- UI --------
-    cv2.putText(frame, f"Score: {score}", (10, 40),
+    cv2.putText(frame, f"You: {score}", (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-    cv2.putText(frame, f"Lives: {lives}", (10, 80),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    cv2.putText(frame, f"AI: {ai_score}", (10, 80),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
-    # 🔥 SHOW COMBO
-    if combo > 1:
-        cv2.putText(frame, f"COMBO x{combo}", (w//2 - 120, 100),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 255), 3)
+    cv2.putText(frame, f"Lives: {lives}", (10, 120),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     if game_over:
         frame[:] = (0, 0, 100)
-        cv2.putText(frame, "GAME OVER", (w//2 - 150, h//2),
-                    cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
-        cv2.putText(frame, "Press R to Restart", (w//2 - 180, h//2 + 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        result = "YOU WIN!" if score > ai_score else "AI WINS!"
+
+        cv2.putText(frame, result, (w//2 - 150, h//2),
+                    cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 4)
 
     prev_x, prev_y = x, y
 
@@ -220,21 +181,17 @@ while True:
         game_started = True
         game_over = False
         score = 0
+        ai_score = 0
         lives = 3
-        combo = 0
         fruits.clear()
-        explosions.clear()
-        slices.clear()
         start_time = cv2.getTickCount()
 
     if key == ord('r') and game_over:
         game_over = False
         score = 0
+        ai_score = 0
         lives = 3
-        combo = 0
         fruits.clear()
-        explosions.clear()
-        slices.clear()
         start_time = cv2.getTickCount()
 
     if key == 27:
